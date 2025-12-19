@@ -23,7 +23,7 @@ jobs:
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: npm run make_release
 
       - name: Make Release Artifact
         run: npm run make_release
