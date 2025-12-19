@@ -1,0 +1,12 @@
+{
+  "name": "servoy-rules",
+  "version": "1.0.0",
+  "description": "AI knowledge base (embeddings and rules) for Servoy AI Bridge MCP server",
+  "scripts": {
+    "make_release": "node scripts/build.js"
+  },
+  "private": true,
+  "devDependencies": {
+    "adm-zip": "0.5.16"
+  }
+}
