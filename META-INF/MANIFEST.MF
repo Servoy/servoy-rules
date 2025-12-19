@@ -4,5 +4,6 @@ Bundle-SymbolicName: servoy-rules
 Package-Type: Web-Service
 Bundle-Version: 1.0.0
 Knowledge-Base: true
+
 Name: servoy-rules.spec
-Web-service: false
+Web-Service: True

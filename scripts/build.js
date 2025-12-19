@@ -5,6 +5,14 @@ console.log('Creating servoy-rules.zip...');
 // creating archives
 var zip = new AdmZip();
 
+// Add .project file
+console.log('Adding .project');
+zip.addLocalFile("./.project", "/");
+
+// Add servoy-rules.spec file (REQUIRED - referenced in MANIFEST.MF)
+console.log('Adding servoy-rules.spec');
+zip.addLocalFile("./servoy-rules.spec", "/");
+
 // Add META-INF with MANIFEST.MF
 console.log('Adding META-INF/');
 zip.addLocalFolder("./META-INF/", "/META-INF/");
