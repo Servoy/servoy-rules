@@ -23,7 +23,56 @@
 
 ---
 
-## AVAILABLE TOOLS (5)
+## CONTEXT MANAGEMENT (Finding Forms Across Solutions/Modules)
+
+**The button tools are context-aware with smart fallback:**
+
+### How It Works:
+1. **Looks in current context FIRST** (active solution or current module)
+2. **If form not found**, searches all solutions and modules
+3. **If found in ONE place**, auto-switches context and performs operation
+4. **If found in MULTIPLE places**, returns error asking user to specify
+
+### Available Context Tools:
+- **getContext** - Shows current context and available solutions/modules
+- **setContext** - Switches to a different solution or module
+
+### When to Use Context:
+
+**User doesn't specify module:**
+```
+# Tool searches automatically
+addButton(formName="customerForm", name="btnSave", ...)
+# If customerForm exists only in Module_A, tool switches there automatically
+# Returns: "Form not found in active solution. Found in Module_A. Context switched and button added."
+```
+
+**User specifies module explicitly:**
+```
+User: "Add a button to customerForm in Module_B"
+You: setContext({context: "Module_B"})
+     then addButton(formName="customerForm", ...)
+```
+
+**Form exists in multiple places:**
+```
+addButton(formName="customerForm", ...)
+# Returns error: "Form 'customerForm' found in multiple locations: MainSolution (active), Module_A, Module_B. 
+# Use setContext to specify which one."
+
+You: setContext({context: "Module_A"})
+     then retry addButton(formName="customerForm", ...)
+```
+
+### Key Rules for Context:
+1. [AUTOMATIC] Tools search and switch context when form is unambiguous
+2. [REQUIRED] If form in multiple places, use setContext to specify
+3. [OPTIONAL] Can call setContext first to be explicit about target
+4. [INFO] Tools always report which context was used in response
+
+---
+
+## AVAILABLE TOOLS (5) [CONTEXT-AWARE with Smart Fallback]
 
 1. **addButton** - Add a new button to a form
 2. **updateButton** - Modify existing button properties
@@ -58,10 +107,21 @@
 **Examples**:
 ```
 # Add button at top-left (20px from top, 25px from left)
+# Tool auto-finds form location if unambiguous
 addButton(
   formName="CustomerForm",
   name="btnSave",
   text="Save",
+  cssPosition="20,-1,-1,25,80,30"
+)
+
+# User explicitly specifies module
+# User says: "Add a save button to orderForm in Module_A"
+setContext({context: "Module_A"})
+addButton(
+  formName="orderForm",
+  name="btnSave",
+  text="Save Order",
   cssPosition="20,-1,-1,25,80,30"
 )
 

@@ -3,231 +3,472 @@
 **Goal**: Manage Servoy database relations using the available MCP tools.
 
 **Current Project**: {{PROJECT_NAME}}  
-**Note**: Use only the tools specified below. See copilot-instructions.md for security and topic change handling.
+**Note**: Use only the tools specified below. See copilot-instructions.md for complete tool restrictions and rules.
 
 ---
 
-## [CRITICAL] TOOL USAGE RESTRICTIONS
+## QUICK REFERENCE: AVAILABLE TOOLS
 
-**For relation operations, use ONLY the tools specified below and NO other tools (like file_search, grep_search, workspace search, etc.).**
+| Tool | Purpose | Key Parameters | Context-Aware |
+|------|---------|----------------|---------------|
+| **openRelation** | Create/update relation | name, primaryDataSource, foreignDataSource | YES (create) |
+| **getRelations** | List relations | scope ("all" or "current") | NO |
+| **deleteRelations** | Delete relation(s) | names (array) | NO |
+| **discoverDbRelations** | Discover FK relationships | serverName | NO |
 
-**See copilot-instructions.md RULE 6 for complete tool restrictions.**
-
-**Key points:**
-- [YES] ONLY use the 4 relation tools + 2 database tools listed below
-- [YES] Stay within {{PROJECT_NAME}} project
-- [NO] Do NOT use file system or search tools
-- [NO] Do NOT search in other projects
-
----
-
-## CRITICAL: DATABASE SERVER NAME
-
-**When ANY database tool requires serverName parameter:**
-
-[FORBIDDEN] NEVER guess server names  
-[FORBIDDEN] NEVER try multiple server names hoping one works  
-[FORBIDDEN] DO NOT proceed without the parameter
-
-[REQUIRED] If user doesn't provide serverName: STOP and ASK THE USER explicitly  
-[REQUIRED] Example: "I need the database server name. What server should I query?"
-
-**This applies to:** discoverDbRelations, listTables, getTableInfo
+**[CRITICAL] Use ONLY these tools. NO file system or search tools allowed.**
 
 ---
 
-## AVAILABLE TOOLS
-
-1. **openRelation** - Create or open relation with full property support (all 8 properties)
-2. **getRelations** - List all relations (renamed from listRelations)
-3. **deleteRelations** - Delete multiple relations (array support, renamed from deleteRelation)
-4. **discoverDbRelations** - Discover potential relations by analyzing foreign keys (renamed from discoverRelations)
-
----
+## TOOL DETAILS
 
 ### openRelation
-**Create new or open existing relation - Dual purpose tool with properties map**
+**Create or update relations with full property support**
 
-**Behavior:**
-- If relation exists: Opens it (and updates properties if provided)
-- If relation doesn't exist: Creates it with provided parameters
+**Dual Behavior:**
+- Relation exists → Opens it (updates properties if provided)
+- Relation missing → Creates it (requires primaryDataSource, foreignDataSource)
 
-**Required for creation:**
-- `name` (string): Relation name
-- `primaryDataSource` (string): Primary table (format: `server_name/table_name`)
-- `foreignDataSource` (string): Foreign table (format: `server_name/table_name`)
+**Parameters:**
+- `name` (string, required): Relation name
+- `primaryDataSource` (string, required for create): Format `server_name/table_name`
+- `foreignDataSource` (string, required for create): Format `server_name/table_name`
+- `primaryColumn` (string, optional): Column in primary table
+- `foreignColumn` (string, optional): Column in foreign table
+- `properties` (object, optional): Property map (see below)
 
-**Optional for creation:**
-- `primaryColumn` (string): Column in primary table
-- `foreignColumn` (string): Column in foreign table
-- `properties` (object): Map of relation properties (see below)
-
-**Properties Map - All 8 Relation Properties:**
-```
-properties: {
+**Properties Map (8 available properties):**
+```javascript
+{
   "joinType": "left outer" | "inner",  // Default: "left outer"
   "allowCreationRelatedRecords": boolean,  // Default: true
   "allowParentDeleteWhenHavingRelatedRecords": boolean,  // Default: false
   "deleteRelatedRecords": boolean,  // Default: false (cascade delete)
-  "initialSort": "column1 asc, column2 desc",  // Optional sorting
+  "initialSort": "column1 asc, column2 desc",  // Optional
   "encapsulation": "public" | "hide" | "module",  // Default: "public"
-  "deprecated": "Use new_relation instead",  // Optional deprecation message
-  "comment": "Documentation for this relation"  // Optional comment
+  "deprecated": "Use new_relation instead",  // Optional
+  "comment": "Documentation"  // Optional
 }
 ```
 
-**Examples**:
+**Note:** Properties are optional. Start simple, add properties only when user specifies behavior.
 
-Simple - open existing:
-```
-openRelation(name="orders_to_customers")
-```
+**Examples:**
+```javascript
+// Open existing
+openRelation({name: "orders_to_customers"})
 
-Create with defaults:
-```
-openRelation(
-  name="orders_to_customers",
-  primaryDataSource="example_data/orders",
-  foreignDataSource="example_data/customers",
-  primaryColumn="customer_id",
-  foreignColumn="customer_id"
-)
-```
+// Create simple relation
+openRelation({
+  name: "orders_to_customers",
+  primaryDataSource: "example_data/orders",
+  foreignDataSource: "example_data/customers",
+  primaryColumn: "customer_id",
+  foreignColumn: "customer_id"
+})
 
-Create with properties:
-```
-openRelation(
-  name="orders_to_customers",
-  primaryDataSource="example_data/orders",
-  foreignDataSource="example_data/customers",
-  primaryColumn="customer_id",
-  foreignColumn="customer_id",
-  properties={
+// Create with properties
+openRelation({
+  name: "orders_to_customers",
+  primaryDataSource: "example_data/orders",
+  foreignDataSource: "example_data/customers",
+  primaryColumn: "customer_id",
+  foreignColumn: "customer_id",
+  properties: {
     "joinType": "inner",
     "deleteRelatedRecords": true,
-    "initialSort": "order_date desc",
-    "comment": "Links orders to their customers"
+    "comment": "Links orders to customers"
   }
-)
+})
+
+// Update existing properties only
+openRelation({
+  name: "orders_to_customers",
+  properties: {"encapsulation": "module"}
+})
 ```
 
-Update existing relation properties:
-```
-openRelation(
-  name="orders_to_customers",
-  properties={
-    "encapsulation": "module",
-    "deprecated": "Use orders_to_customers_v2 instead"
-  }
-)
-```
+---
 
 ### getRelations
-**List all relations in current project**
+**List relations in active solution and/or modules**
 
-**Parameters**: None
+**Parameters:**
+- `scope` (string, optional, default "all"):
+  - `"all"` → Active solution + all modules
+  - `"current"` → Current context only (from ContextService)
 
-**Example**: `getRelations()`
+**Examples:**
+```javascript
+// List all relations (default)
+getRelations()
+getRelations({scope: "all"})
 
-**Returns**: List of all relations with their primary/foreign datasources
+// List only current context
+setContext({context: "Module_A"})
+getRelations({scope: "current"})  // Only Module_A relations
+
+// List only active solution
+setContext({context: "active"})
+getRelations({scope: "current"})  // Only active solution
+```
+
+---
 
 ### deleteRelations
 **Delete one or more relations**
 
-**Parameters**: 
-- `names` (required array): Array of relation names to delete
+**Parameters:**
+- `names` (array of strings, required): Relation names to delete
 
-**Examples**: 
-```
-deleteRelations(names=["old_relation"])
-deleteRelations(names=["temp_rel1", "temp_rel2", "deprecated_relation"])
+**Examples:**
+```javascript
+// Delete one
+deleteRelations({names: ["old_relation"]})
+
+// Delete multiple
+deleteRelations({names: ["temp_rel1", "temp_rel2", "deprecated"]})
 ```
 
-**Returns**: Success/not found details for each relation
+**Returns:** Success/not found status for each relation
+
+---
 
 ### discoverDbRelations
-**Discover potential relations by analyzing foreign keys**
+**Analyze database for foreign key relationships**
 
-**Parameters**:
-- `serverName` (required): Database server name - [FORBIDDEN] NEVER guess this, [REQUIRED] always ASK THE USER if not provided
+**Parameters:**
+- `serverName` (string, required): Database server name
+  - **[CRITICAL]** If not provided, STOP and ASK user - NEVER guess
 
-**Example**: `discoverDbRelations(serverName="example_data")`
-
-**Returns**:
-- List of tables in the database
-- **EXPLICIT Foreign Keys**: Actual database FK constraints (most reliable)
-- **POTENTIAL Relations**: Inferred from PK name matching
-
-**Always present both types separately to the user.**
-
----
-
-## KEY RULES
-
-1. **Database server name is REQUIRED** - Always ask first if not provided
-2. **Project ({{PROJECT_NAME}}) vs Database server**: If user mentions a name that's NOT "{{PROJECT_NAME}}", it's likely a database server  
-3. **Two tables mentioned**: First = primary, second = foreign (don't ask unless ambiguous)
-4. **Distinguish FKs**: Always show EXPLICIT FKs separately from POTENTIAL relations when using discoverDbRelations
-5. **Missing info**: Use `discoverDbRelations` to discover available relationships, or ASK THE USER
-6. **DataSource format**: `server_name/table_name` (tool adds `db:/` prefix automatically)
-7. **Properties are optional**: Start simple (just create), add properties when needed for specific behavior
-8. **Update via properties**: To modify existing relation, call openRelation with just name + properties map
-9. **Bulk delete**: Use deleteRelations with array for multiple relations at once
-
----
-
-## WORKFLOW
-
-**Creating a Relation**:
-1. Ask for database server name if not provided
-2. If user doesn't know what relations to create: `discoverDbRelations(serverName="...")`
-3. Show EXPLICIT FKs first, then POTENTIAL relations
-4. When user mentions two tables: first = primary, second = foreign
-5. Collect all parameters, then call `openRelation`
-6. Add properties map if user specifies behavior (join type, cascade delete, etc.)
-
-**Discovering Relations**:
-- Call `discoverDbRelations(serverName="...")` to analyze FK relationships
-- Present both EXPLICIT and POTENTIAL relations to user
-- Help user choose which relation to create
-
-**Updating Relations**:
-- To update properties: `openRelation(name="...", properties={...})`
-- Can update any of the 8 properties independently
-
-**Other Operations**:
-- Open existing: `openRelation(name="relation_name")`
-- Delete one: `deleteRelations(names=["relation_name"])`
-- Delete multiple: `deleteRelations(names=["rel1", "rel2"])`
-- List all: `getRelations()`
-
----
-
-## EXAMPLES
-
-**Example 1: User knows everything**
-```
-User: "Create relation from orders to customers using customer_id"
---> openRelation(name="orders_to_customers",
-               primaryDataSource="example_data/orders",
-               foreignDataSource="example_data/customers",
-               primaryColumn="customer_id",
-               foreignColumn="customer_id")
+**Example:**
+```javascript
+discoverDbRelations({serverName: "example_data"})
 ```
 
-**Example 2: User doesn't know what's available**
+**Returns:**
+- Table list
+- **EXPLICIT Foreign Keys** - Actual DB constraints (most reliable)
+- **POTENTIAL Relations** - Inferred from PK name matching
+
+**[REQUIRED] Present both types separately to user**
+
+---
+
+## HOW TO PRESENT RESULTS TO USER
+
+### When Listing Relations (getRelations output)
+
+**[REQUIRED] Use this EXACT format:**
+
+```
+Here are the relations in your solution:
+
+1. customers_to_orders (in: active solution)
+   - Primary: db:/example_data/customers
+   - Foreign: db:/example_data/orders
+
+2. products_to_categories (in: Module_A)
+   - Primary: db:/example_data/products
+   - Foreign: db:/example_data/categories
+
+3. orders_to_items (in: active solution)
+   - Primary: db:/example_data/orders
+   - Foreign: db:/example_data/order_items
+```
+
+**Formatting Rules:**
+- [REQUIRED] Number ONLY the relation name line (1., 2., 3.)
+- [REQUIRED] DO NOT number Primary/Foreign lines
+- [REQUIRED] Indent detail lines with spaces or dashes
+- [REQUIRED] Add blank line between each relation
+- [FORBIDDEN] NO flat numbered list of all lines
+
+**WRONG (DO NOT DO THIS):**
+```
+1. customers_to_orders (in: active solution)
+2. Primary: db:/example_data/customers    <- WRONG!
+3. Foreign: db:/example_data/orders       <- WRONG!
+4. products_to_categories (in: Module_A)  <- WRONG! (should be #2)
+```
+
+---
+
+### When Presenting Discovery Results (discoverDbRelations output)
+
+**[REQUIRED] Show EXPLICIT and POTENTIAL separately:**
+
+```
+Database: example_data
+
+EXPLICIT Foreign Keys (actual DB constraints):
+1. orders.customer_id -> customers.id
+2. order_items.order_id -> orders.id
+
+POTENTIAL Relations (inferred from naming):
+1. products.category_id -> categories.id (no FK constraint)
+```
+
+---
+
+## CONTEXT MANAGEMENT
+
+**[CRITICAL] ALWAYS START EVERY RESPONSE WITH CURRENT CONTEXT**
+
+**Required format for EVERY response:**
+```
+Current context: <context-name>
+
+[rest of your response]
+```
+
+**Examples:**
+- "Current context: active (MainSolution)"
+- "Current context: Module_A"
+- "Current context: Module_B"
+
+**Check context at start:** Call `getContext()` if you don't know the current context.
+
+---
+
+### Tool Behavior by Operation Type
+
+**READ Operations (openRelation, getRelations):**
+- Search **current context FIRST**
+- If not found → search **all modules and active solution**
+- Shows location info when found in different module
+- **Example:** In Module_C, asking for "customers_to_orders" will find it in Module_A
+
+**WRITE Operations (openRelation with create parameters):**
+- Creates in **current context ONLY**
+- **If different module needed:** Call `setContext({context: "ModuleName"})` FIRST
+- **Example:** To create in Module_A while in Module_C → `setContext` then `openRelation`
+
+**DELETE Operations (deleteRelations):**
+- Searches **across all modules and active solution** to find relations
+- Deletes from wherever they are found (no context switch needed)
+- **Example:** Can delete relation from Module_A while in Module_C - tool finds and deletes it automatically
+
+---
+
+### Default Behavior:
+- Context starts as "active" (active solution)
+- New relations created in current context
+- Context persists until changed or solution activated
+
+### When to Check/Set Context:
+
+**User mentions module:**
+```javascript
+User: "Create relation in Module_A"
+You: setContext({context: "Module_A"})  // FIRST!
+     openRelation({...})  // Creates in Module_A
+```
+
+**Unsure where to create:**
+```javascript
+getContext()  // Check current context + available options
+```
+
+**Multiple operations in same module:**
+```javascript
+setContext({context: "Module_B"})
+openRelation({...})  // Created in Module_B
+openRelation({...})  // Also Module_B (context persists)
+```
+
+**Return to active solution:**
+```javascript
+setContext({context: "active"})
+```
+
+### Context Response Messages:
+- "Created relation 'X' in MainSolution (active solution)"
+- "Created relation 'Y' in Module_A"
+- "Relation 'customers_to_orders' opened successfully (from module: Module_A)" ← Found via fallback search
+
+**[REQUIRED] If user says "in Module_X", call setContext FIRST before creating**
+
+---
+
+## COMPLETE WORKFLOWS
+
+### Workflow 1: Create Relation (User Knows All Details)
+
+1. Check if user specified module → If yes: `setContext({context: "Module_X"})`
+2. Call `openRelation` with all parameters
+3. Tool reports where created
+
+**Example:**
+```
+User: "Create relation from orders to customers using customer_id in Module_A"
+→ setContext({context: "Module_A"})
+→ openRelation({
+    name: "orders_to_customers",
+    primaryDataSource: "example_data/orders",
+    foreignDataSource: "example_data/customers",
+    primaryColumn: "customer_id",
+    foreignColumn: "customer_id"
+  })
+→ Response: "Created relation 'orders_to_customers' in Module_A"
+```
+
+---
+
+### Workflow 2: Discover Then Create
+
+1. Check context if module mentioned
+2. Ask for database server name if not provided
+3. Call `discoverDbRelations({serverName: "..."})`
+4. Present EXPLICIT FKs separately from POTENTIAL
+5. User chooses which to create
+6. Call `openRelation` with chosen parameters
+
+**Example:**
 ```
 User: "I need a relation"
---> Ask: "What's your database server name?"
+→ Ask: "What's your database server name?"
 User: "example_data"
---> discoverDbRelations(serverName="example_data")
---> Show: EXPLICIT FKs + POTENTIAL relations
---> User chooses tables
---> openRelation(...with parameters...)
+→ discoverDbRelations({serverName: "example_data"})
+→ Show: EXPLICIT FKs (orders → customers) + POTENTIAL (products → categories)
+User: "Create the orders to customers one"
+→ openRelation({
+    name: "orders_to_customers",
+    primaryDataSource: "example_data/orders",
+    foreignDataSource: "example_data/customers",
+    primaryColumn: "customer_id",
+    foreignColumn: "customer_id"
+  })
 ```
 
-**Example 3: List existing**
+---
+
+### Workflow 3: Update Existing Relation
+
+1. Call `openRelation` with name + properties only
+2. Tool updates and confirms
+
+**Example:**
+```
+User: "Make orders_to_customers an inner join"
+→ openRelation({
+    name: "orders_to_customers",
+    properties: {"joinType": "inner"}
+  })
+```
+
+---
+
+### Workflow 4: List and Filter Relations
+
+**List all:**
 ```
 User: "Show me all relations"
---> getRelations()
+→ getRelations()
+→ [Format output per "How to Present Results" section]
+```
+
+**List current context only:**
+```
+User: "What relations are in Module_A?"
+→ setContext({context: "Module_A"})
+→ getRelations({scope: "current"})
+```
+
+**List active solution only:**
+```
+User: "Show me relations in the main solution"
+→ setContext({context: "active"})
+→ getRelations({scope: "current"})
+```
+
+---
+
+### Workflow 5: Delete Relations
+
+**Single:**
+```
+deleteRelations({names: ["old_relation"]})
+```
+
+**Multiple:**
+```
+deleteRelations({names: ["temp1", "temp2", "deprecated"]})
+```
+
+---
+
+## CRITICAL RULES
+
+1. **Database server name**: If not provided, STOP and ASK user - NEVER guess
+2. **DataSource format**: User provides `server_name/table_name` (tool auto-adds `db:/` prefix)
+3. **Context**: Check/set BEFORE creating if user mentions module
+4. **Properties**: Optional - start simple, add only when user specifies behavior
+5. **Table order**: User says "orders to customers" → orders=primary, customers=foreign
+6. **FK types**: Present EXPLICIT separately from POTENTIAL when discovering
+7. **Scope parameter**: Use `scope: "current"` to filter by context, default is `"all"`
+8. **Tool restrictions**: Use ONLY the 4 tools listed - NO file system/search tools
+
+---
+
+## COMPREHENSIVE EXAMPLES
+
+**Example 1: Simple create in active solution**
+```
+User: "Create relation from orders to customers on customer_id"
+→ openRelation({
+    name: "orders_to_customers",
+    primaryDataSource: "example_data/orders",
+    foreignDataSource: "example_data/customers",
+    primaryColumn: "customer_id",
+    foreignColumn: "customer_id"
+  })
+```
+
+**Example 2: Create in module with properties**
+```
+User: "Create inner join relation from products to categories in Module_A"
+→ setContext({context: "Module_A"})
+→ openRelation({
+    name: "products_to_categories",
+    primaryDataSource: "example_data/products",
+    foreignDataSource: "example_data/categories",
+    primaryColumn: "category_id",
+    foreignColumn: "category_id",
+    properties: {"joinType": "inner"}
+  })
+```
+
+**Example 3: Discovery workflow**
+```
+User: "What relations can I create?"
+→ Ask: "What's your database server name?"
+User: "example_data"
+→ discoverDbRelations({serverName: "example_data"})
+→ Present EXPLICIT + POTENTIAL
+User: "Create the first explicit one"
+→ openRelation({...})
+```
+
+**Example 4: List with scope**
+```
+User: "Show relations in Module_A only"
+→ setContext({context: "Module_A"})
+→ getRelations({scope: "current"})
+→ [Format per presentation rules]
+```
+
+**Example 5: Update existing**
+```
+User: "Deprecate the old_relation"
+→ openRelation({
+    name: "old_relation",
+    properties: {"deprecated": "Use new_relation instead"}
+  })
+```
+
+**Example 6: Bulk delete**
+```
+User: "Delete temp_rel1, temp_rel2, and old_relation"
+→ deleteRelations({names: ["temp_rel1", "temp_rel2", "old_relation"]})
 ```

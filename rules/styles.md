@@ -3,72 +3,70 @@
 **Goal**: Manage CSS/LESS styles using the available MCP tools.
 
 **Current Project**: {{PROJECT_NAME}}  
-**Note**: Use only the tools specified below. See copilot-instructions.md for security and topic change handling.
+**Note**: Use only the tools specified below. See copilot-instructions.md for complete tool restrictions and rules.
 
 ---
 
-## [CRITICAL] TOOL USAGE RESTRICTIONS
+## QUICK REFERENCE: AVAILABLE TOOLS
 
-**For style operations, use ONLY the tools specified below and NO other tools (like file_search, grep_search, workspace search, etc.).**
+| Tool | Purpose | Key Parameters | Context-Aware |
+|------|---------|----------------|---------------|
+| **addStyle** | Create/update CSS/LESS class | className, cssContent | YES (create) |
+| **getStyle** | Get CSS content of a class | className | NO |
+| **listStyles** | List all CSS classes | none | NO |
+| **deleteStyle** | Delete a CSS class | className | NO |
 
-**See copilot-instructions.md RULE 6 for complete tool restrictions.**
+**[CRITICAL] Use ONLY these tools. NO file system or search tools allowed.**
 
-**Key points:**
-- [YES] ONLY use the 4 style tools listed in "AVAILABLE TOOLS" section below
-- [YES] Stay within {{PROJECT_NAME}} project
-- [YES] If tool returns "not found", ACCEPT that result and STOP immediately
-- [NO] Do NOT use file system or search tools
-- [NO] Do NOT search in other projects
-- [NO] Do NOT try "alternative methods"
+---
 
-## AVAILABLE TOOLS
+## TOOL DETAILS
 
-### Style Management Tools
+### addStyle
+**Create or update CSS/LESS class in ai-generated.less file**
 
-#### addStyle
-Adds or updates a CSS/LESS class in ai-generated.less file.
+**Dual Behavior:**
+- Class exists → Replaces existing content
+- Class missing → Appends new class
 
 **Parameters:**
-- className (string, REQUIRED) - CSS class name WITHOUT dot (e.g., "btn-custom-blue")
-- cssContent (string, REQUIRED) - CSS/LESS rules - CONTENT ONLY, NOT the wrapper. Supports:
-  - Simple CSS: "background-color: blue; color: white"
-  - LESS with nesting: Multi-line with &:hover, &:active, etc.
+- `className` (string, required): CSS class name WITHOUT dot (e.g., "btn-custom-blue")
+- `cssContent` (string, required): CSS/LESS rules - CONTENT ONLY, NOT the wrapper
 
 **[CRITICAL] Send ONLY the CSS content:**
 - [WRONG] cssContent=".btn-glow { color: red; }"  ← includes wrapper
 - [CORRECT] cssContent="color: red;"  ← content only
-- The tool automatically adds: .className { your-content }
+- Tool automatically adds: `.className { your-content }`
 
-**Behavior:**
-- If className exists: Replaces existing content
-- If className does not exist: Appends new class
-- Auto-imports ai-generated.less into main solution .less file (first time only)
+**File Location:** 
+- Active solution: `MainSolution/medias/ai-generated.less`
+- Module: `ModuleName/medias/ai-generated.less`
+
+**Features:**
+- Auto-imports ai-generated.less into main solution .less file (first time)
 - Creates backup before modifications (.less.backup)
-- VALIDATES syntax before writing (prevents malformed CSS)
-
-**File Location:** medias/ai-generated.less
-
-**IMPORTANT - LESS Syntax Support:**
-- [YES] Nested selectors are supported: &:hover { }, &:active { }, &:focus { }
-- [YES] LESS variables and features work: @color, mixins, etc.
-- [NO] Do NOT use duplicate braces: "{ {" or "}; }"
-- [REQUIRED] Braces must be balanced (same number of opening and closing)
+- Validates syntax before writing (prevents malformed CSS)
 
 **Examples:**
+```javascript
+// Simple CSS in active solution
+addStyle({
+  className: "btn-simple",
+  cssContent: "background-color: #007bff; color: white; padding: 10px 20px; border-radius: 8px"
+})
 
-Simple flat CSS:
-```
-addStyle(
-  className="btn-simple",
-  cssContent="background-color: #007bff; color: white; padding: 10px 20px; border-radius: 8px"
-)
-```
+// Style in specific module
+setContext({context: "Module_A"})
+addStyle({
+  className: "btn-green",
+  cssContent: "background-color: #10b981; color: white; padding: 10px 20px"
+})
+// Created in Module_A/medias/ai-generated.less
 
-LESS with nested selectors:
-```
-addStyle(
-  className="btn-glow-green",
-  cssContent="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+// LESS with nested selectors
+addStyle({
+  className: "btn-glow-green",
+  cssContent: `background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -82,480 +80,508 @@ addStyle(
   
   &:active {
     transform: translateY(0);
-  }"
-)
+  }`
+})
 ```
 
-**Validation Errors:**
-If syntax is invalid, you will receive a detailed error message explaining the issue. Common errors:
-- "Duplicate opening brace '{ {' detected" - Remove extra brace
-- "Unbalanced braces" - Check that each { has a matching }
-- "Invalid semicolon after final closing brace" - Remove "; " after last }
-```
+---
 
-#### getStyle
-Gets the CSS content of a class from ai-generated.less file.
+### getStyle
+**Get CSS content of a class**
 
 **Parameters:**
-- className (string, REQUIRED) - CSS class name WITHOUT dot
+- `className` (string, required): CSS class name WITHOUT dot
 
-**Returns:** CSS rules if found, or message if not found
+**Returns:** CSS rules if found, or "not found" message
 
 **Example:**
-```
-getStyle(className="btn-custom-blue")
+```javascript
+getStyle({className: "btn-custom-blue"})
 ```
 
-#### listStyles
-Lists all CSS class names defined in ai-generated.less file.
+---
+
+### listStyles
+**List all CSS class names in ai-generated.less**
 
 **Parameters:** None
 
 **Returns:** Comma-separated list of class names (without dots)
 
 **Example:**
-```
+```javascript
 listStyles()
 ```
 
-#### deleteStyle
-Deletes a CSS class from ai-generated.less file.
+---
+
+### deleteStyle
+**Delete a CSS class from ai-generated.less**
 
 **Parameters:**
-- className (string, REQUIRED) - CSS class name WITHOUT dot
+- `className` (string, required): CSS class name WITHOUT dot
 
-**Behavior:** Creates backup before deletion
+**Features:** Creates backup before deletion
+
+**Example:**
+```javascript
+deleteStyle({className: "btn-custom-blue"})
+```
+
+---
+
+## HOW TO PRESENT RESULTS TO USER
+
+### When Listing Styles (listStyles output)
+
+**[REQUIRED] Use this format:**
+
+```
+Styles in ai-generated.less:
+
+Available CSS classes:
+- btn-custom-blue
+- btn-green
+- btn-glow-green
+- label-highlight
+- form-container
+
+Total: 5 classes
+```
+
+**Formatting Rules:**
+- [REQUIRED] List class names without dots
+- [REQUIRED] One class per line with dash/bullet
+- [REQUIRED] Show total count
+- [FORBIDDEN] DO NOT number the class names
+
+---
+
+## CONTEXT MANAGEMENT
+
+**[CRITICAL] ALWAYS START EVERY RESPONSE WITH CURRENT CONTEXT**
+
+**Required format for EVERY response:**
+```
+Current context: <context-name>
+
+[rest of your response]
+```
+
+**Examples:**
+- "Current context: active (MainSolution)"
+- "Current context: Module_A"
+- "Current context: Module_B"
+
+**Check context at start:** Call `getContext()` if you don't know the current context.
+
+---
+
+### Tool Behavior by Operation Type
+
+**READ Operations (getStyle, listStyles):**
+- Search **current context FIRST**
+- If not found → search **all modules and active solution**
+- Shows location info when found in different module
+- **Example:** In Module_C, asking for "btn-custom" will find it in Module_A
+- **listStyles with scope='all':** Shows all styles from all modules with origin info
+
+**WRITE Operations (addStyle):**
+- Creates in **current context ONLY**
+- **If different module needed:** Call `setContext({context: "ModuleName"})` FIRST
+- **Example:** To create in Module_A while in Module_C → `setContext` then `addStyle`
+
+**DELETE Operations (deleteStyle):**
+- Deletes from **current context ONLY** (styles are file-based, not repository objects)
+- **If different module needed:** Call `setContext({context: "ModuleName"})` FIRST
+- **Example:** To delete from Module_A while in Module_C → `setContext` then `deleteStyle`
+- **Note:** Unlike relations/valuelists, styles do NOT auto-search across modules for delete
+
+---
+
+### Default Behavior:
+- Context starts as "active" (active solution)
+- Styles created in current context's `medias/ai-generated.less` file
+- Context persists until changed or solution activated
+
+### File Locations by Context:
+- **Active solution**: `MainSolution/medias/ai-generated.less`
+- **Module_A**: `Module_A/medias/ai-generated.less`
+- **Module_B**: `Module_B/medias/ai-generated.less`
+
+### When to Check/Set Context:
+
+**User mentions module:**
+```javascript
+User: "Add style in Module_B"
+You: setContext({context: "Module_B"})  // FIRST!
+     addStyle({...})  // Creates in Module_B/medias/ai-generated.less
+```
+
+**Unsure where to create:**
+```javascript
+getContext()  // Check current context + available options
+```
+
+**Multiple operations in same module:**
+```javascript
+setContext({context: "Module_A"})
+addStyle({...})  // Created in Module_A
+addStyle({...})  // Also Module_A (persists)
+```
+
+**Return to active solution:**
+```javascript
+setContext({context: "active"})
+```
+
+**[REQUIRED] If user says "in Module_X", call setContext FIRST before creating**
+
+---
+
+## CSS/LESS SYNTAX GUIDE
+
+### Two Formats Supported:
+
+**Format 1: Simple CSS (semicolon-separated)**
+```css
+background: blue; color: white; padding: 10px
+```
+- Semicolon-separated property-value pairs
+- No curly braces (added automatically)
+- Properties formatted with 2-space indent in file
+
+**Format 2: LESS with nested selectors**
+```less
+background: blue;
+color: white;
+
+&:hover {
+  background: darkblue;
+}
+
+&:active {
+  background: navy;
+}
+```
+- Multi-line format with nested blocks
+- Use `&:hover`, `&:active`, `&:focus` for pseudo-classes
+- Each nested block needs its own braces
+- LESS variables and mixins supported
+
+### Syntax Rules (CRITICAL):
+
+**[YES] Correct syntax:**
+- One opening brace per selector: `.btn {` NOT `.btn { {`
+- One closing brace per block: `}` NOT `}; }` or `} }`
+- Balanced braces: same count of `{` and `}`
+- Semicolons after properties: `color: red;`
+- Nested selectors with `&`: `&:hover { }`
+
+**[NO] Common errors to AVOID:**
+- No semicolon after class closing brace: `}` NOT `};`
+- No duplicate braces: `{ {` or `} }`
+- No extra braces in cssContent (tool adds wrapper)
+
+### Validation:
+
+**The tool validates syntax before writing. Common errors:**
+
+**Error: "Duplicate opening brace '{ {' detected"**
+```css
+/* WRONG */
+.btn-glow {
+{
+  color: red;
+}
+
+/* CORRECT */
+.btn-glow {
+  color: red;
+}
+```
+
+**Error: "Invalid closing sequence '};' detected"**
+```css
+/* WRONG */
+.btn-glow {
+  color: red;
+};
+
+/* CORRECT */
+.btn-glow {
+  color: red;
+}
+```
+
+**Error: "Unbalanced braces"**
+```css
+/* WRONG - missing closing brace for &:hover */
+.btn-glow {
+  color: red;
+  &:hover {
+    color: blue;
+}
+
+/* CORRECT */
+.btn-glow {
+  color: red;
+  &:hover {
+    color: blue;
+  }
+}
+```
+
+**If validation fails:** READ the error message carefully - it tells you what's wrong and how to fix it. Then retry with corrected CSS.
+
+---
+
+## COMPLETE WORKFLOWS
+
+### Workflow 1: Create Simple Style
+
+1. Check context if module mentioned
+2. Determine class name (suggest based on appearance)
+3. Create CSS with simple format
+4. Call `addStyle`
 
 **Example:**
 ```
-deleteStyle(className="btn-custom-blue")
+User: "Create blue button style in Module_A"
+→ setContext({context: "Module_A"})
+→ addStyle({
+    className: "btn-blue",
+    cssContent: "background: #007bff; color: white; padding: 12px 24px; border-radius: 6px"
+  })
+→ Response: "Style 'btn-blue' created in Module_A/medias/ai-generated.less"
 ```
-
-## KEY RULES
-
-### 1. Style Naming Convention
-- Class names should be descriptive and kebab-case
-- No dots in className parameter (e.g., "btn-custom-blue", not ".btn-custom-blue")
-- Avoid generic names that might conflict with existing styles
-- Consider prefixing: "btn-", "label-", "form-", etc.
-
-### 3. CSS/LESS Content Format
-Two formats supported:
-
-**Simple CSS (semicolon-separated):**
-- Use semicolon-separated property-value pairs
-- No curly braces needed (added automatically at class level)
-- Example: "background: blue; color: white; padding: 10px"
-- Properties are formatted with 2-space indent in file
-
-**LESS with nested selectors:**
-- Multi-line format with nested blocks
-- Use &:hover, &:active, &:focus for pseudo-classes
-- Each nested block needs its own braces
-- Example:
-  ```
-  background: blue;
-  color: white;
-  
-  &:hover {
-    background: darkblue;
-  }
-  ```
-
-**[CRITICAL] Syntax Rules:**
-- [YES] One opening brace per selector: .btn { NOT .btn { {
-- [YES] One closing brace per block: } NOT }; } or } }
-- [YES] Balanced braces: same count of { and }
-- [YES] Semicolons after properties: color: red;
-- [NO] No semicolon after class closing brace: } NOT };
-- [NO] No duplicate braces: { { or } }
-
-**[WRONG] Common Syntax Errors:**
-```
-.btn-glow {
-{                           <-- WRONG: Duplicate opening brace
-  color: red;
-}
-};                          <-- WRONG: Semicolon after closing brace
-}                           <-- WRONG: Extra closing brace
-```
-
-**[CORRECT] Proper Syntax:**
-```
-.btn-glow {
-  color: red;
-  &:hover {
-    color: darkred;
-  }
-}
-```
-
-### 4. Variant Categories
-Common categories:
-- button
-- label
-- checkbox
-- textbox
-- textarea
-- combobox
-- calendar
-- (any component type)
-
-### 5. Applying Styles to Components
-Create styles with addStyle, then apply using styleClass parameter in component tools:
-- Example: addButton(formName="myForm", name="btnSubmit", text="Submit", styleClass="btn btn-custom-blue")
-- Multiple classes supported: styleClass="btn btn-primary btn-large"
-
-### 6. Check Before Create
-Always check if style exists before creating:
-
-**For Styles:**
-```
-getStyle(className="btn-custom-blue")
-If not found --> addStyle(...)
-If found and needs update --> addStyle(...) [replaces content]
-```
-
-### 7. File Structure
-Style files are in medias/ folder:
-- medias/ai-generated.less - AI-generated CSS classes
-- medias/{solutionName}.less - Main solution styles (auto-import added)
-
-### 8. Backup Safety
-All modifications create backup files:
-- .less.backup for style changes
-- Backups allow recovery if needed
-
-### 9. LESS Import
-First time ai-generated.less is created, import is added to main solution .less file:
-- Import statement: @import "ai-generated.less";
-- Added at top of file (after initial comments)
-- Only imported once (duplicate check)
-
-### 10. Parameter Guessing Prevention
-[FORBIDDEN] Never guess parameter values
-[REQUIRED] If className or cssContent not provided: ASK user
-
-## WORKFLOW
-
-### Creating Styled Components
-
-**Scenario 1: User wants custom styled button**
-
-1. Clarify requirements:
-   - What style properties? (colors, padding, borders, etc.)
-   - What's a good class name? (suggest based on appearance)
-
-2. Create the CSS style:
-   ```
-   addStyle(
-     className="btn-demo-primary",
-     cssContent="background: #007bff; color: white; padding: 12px 24px; border-radius: 6px; border: none"
-   )
-   ```
-
-3. Add component with style:
-   ```
-   addButton(
-     formName="myForm",
-     name="btnSubmit",
-     text="Submit",
-     cssPosition="20,-1,-1,25,100,40",
-     styleClass="btn btn-demo-primary"
-   )
-   ```
-
-**Scenario 2: User wants to update existing style**
-
-1. Check current style:
-   ```
-   getStyle(className="btn-demo-primary")
-   ```
-
-2. Update with new content:
-   ```
-   addStyle(
-     className="btn-demo-primary",
-     cssContent="NEW CSS RULES HERE"
-   )
-   ```
-   [Note: This REPLACES existing content]
-
-**Scenario 3: User wants to list all styles/variants**
-
-1. List styles:
-   ```
-   listStyles()
-   ```
-
-2. List all variants:
-   ```
-   listVariants()
-   ```
-
-3. List variants by category:
-   ```
-   listVariants(category="button")
-   ```
-
-**Scenario 4: User wants to delete style**
-
-Delete style:
-```
-deleteStyle(className="btn-demo-primary")
-```
-
-## EXAMPLES
-
-### Example 1: Blue Gradient Button Style
-
-**User Request:** "Create a blue gradient button style"
-
-**AI Response:**
-```
-I'll create a blue gradient button style for you.
-
-Creating CSS class 'btn-blue-gradient':
-addStyle(
-  className="btn-blue-gradient",
-  cssContent="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600"
-)
-
-Style created successfully. You can now use it with:
-styleClass="btn btn-blue-gradient"
-```
-
-### Example 2: Highlight Label Style
-
-**User Request:** "Create a yellow highlight label style"
-
-**AI Response:**
-```
-I'll create a yellow highlight label style.
-
-Creating CSS class 'label-highlight':
-addStyle(
-  className="label-highlight",
-  cssContent="background-color: #fff3cd; color: #856404; padding: 5px 10px; border: 1px solid #ffc107; border-radius: 4px; font-weight: bold"
-)
-
-Style created successfully. You can use it with:
-styleClass="label-highlight"
-```
-
-### Example 3: Update Existing Style
-
-**User Request:** "Change the button gradient to be more purple"
-
-**AI Response:**
-```
-I'll update the blue gradient to be more purple.
-
-First, checking current style:
-getStyle(className="btn-blue-gradient")
-
-Updating with new purple gradient:
-addStyle(
-  className="btn-blue-gradient",
-  cssContent="background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%); color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600"
-)
-
-Style updated successfully. Existing components using this class will automatically reflect the change.
-```
-
-### Example 4: Check Before Create
-
-**User Request:** "Create a primary button style"
-
-**AI Response:**
-```
-Let me check if a primary button style already exists.
-
-Checking existing styles:
-listStyles()
-
-[If found in list]
-I see there's already a 'btn-primary' style. Would you like me to:
-1. Update the existing 'btn-primary' style?
-2. Create a new style with a different name (e.g., 'btn-my-primary')?
-
-[If not found]
-No existing primary style found. Creating new style:
-addStyle(
-  className="btn-primary",
-  cssContent="background: #007bff; color: white; padding: 10px 20px; border-radius: 5px; border: none"
-)
-```
-
-### Example 5: Multiple Styles for Form
-
-**User Request:** "Create styles for a contact form: submit button (green), cancel button (red), and form container"
-
-**AI Response:**
-```
-I'll create three styles for your contact form.
-
-1. Green Submit Button:
-addStyle(
-  className="btn-submit-green",
-  cssContent="background: #28a745; color: white; padding: 12px 30px; border-radius: 6px; border: none; font-weight: 600"
-)
-
-2. Red Cancel Button:
-addStyle(
-  className="btn-cancel-red",
-  cssContent="background: #dc3545; color: white; padding: 12px 30px; border-radius: 6px; border: none; font-weight: 600"
-)
-
-3. Form Container:
-addStyle(
-  className="form-container",
-  cssContent="padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)"
-)
-
-All styles created. You can now apply them to your form components.
-```
-
-## ERROR HANDLING
-
-### Common Errors
-
-**Error: 'className' parameter is required**
-- Cause: Missing className parameter
-- Solution: Provide className when calling addStyle, getStyle, or deleteStyle
-
-**Error: 'cssContent' parameter is required**
-- Cause: Missing cssContent parameter in addStyle
-- Solution: Provide CSS rules as cssContent parameter
-
-### CSS Syntax Validation Errors
-
-The addStyle tool validates CSS/LESS syntax before writing to prevent file corruption. If validation fails, you will receive a detailed error message explaining the issue and how to fix it.
-
-**Error: "CSS syntax error: Duplicate opening brace '{ {' detected"**
-- Cause: Extra opening brace after selector
-- [WRONG]:
-  ```
-  .btn-glow-green {
-  {
-    color: red;
-  }
-  ```
-- [CORRECT]:
-  ```
-  .btn-glow-green {
-    color: red;
-  }
-  ```
-- Solution: Remove the extra opening brace
-
-**Error: "CSS syntax error: Duplicate closing brace '} }' detected"**
-- Cause: Extra closing brace in the middle of the style
-- [WRONG]:
-  ```
-  .btn-glow {
-    color: red;
-  }
-  }
-  ```
-- [CORRECT]:
-  ```
-  .btn-glow {
-    color: red;
-  }
-  ```
-- Solution: Remove the extra closing brace
-
-**Error: "CSS syntax error: Invalid closing sequence '};' detected"**
-- Cause: Semicolon after closing brace at class level
-- [WRONG]:
-  ```
-  .btn-glow {
-    color: red;
-  };
-  ```
-- [CORRECT]:
-  ```
-  .btn-glow {
-    color: red;
-  }
-  ```
-- Solution: Remove semicolon after final closing brace (CSS classes end with } not };)
-
-**Error: "CSS syntax error: Unbalanced braces"**
-- Cause: Different number of opening and closing braces
-- [WRONG]:
-  ```
-  .btn-glow {
-    color: red;
-    &:hover {
-      color: blue;
-  }
-  ```
-  (Missing closing brace for &:hover)
-- [CORRECT]:
-  ```
-  .btn-glow {
-    color: red;
-    &:hover {
-      color: blue;
-    }
-  }
-  ```
-- Solution: Add missing braces or remove extra braces to balance
-
-**Real-World Example: The Glow Button Error**
-
-This was the problematic CSS that triggered validation:
-```
-.btn-glow-green {
-{                               <-- ERROR 1: Duplicate opening brace
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  &:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  }
-};                              <-- ERROR 2: Invalid semicolon
-}                               <-- ERROR 3: Extra closing brace
-```
-
-Validation would return:
-```
-"CSS syntax error: Duplicate opening brace '{ {' detected. 
-Each selector should have only one opening brace. 
-Example: '.btn { color: red; }' not '.btn { { color: red; }'"
-```
-
-Corrected version:
-```
-.btn-glow-green {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
-    transform: translateY(-2px);
-  }
-  
-  &:active {
-    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-    transform: translateY(0);
-  }
-}
-```
-
-**Key Takeaway:** When you receive a validation error, READ THE ERROR MESSAGE carefully. It will tell you:
-1. What the problem is (duplicate brace, unbalanced braces, etc.)
-2. Where the problem is (line number if available)
-3. How to fix it (example of correct syntax)
-
-Then retry with corrected CSS.
 
 ---
+
+### Workflow 2: Create LESS Style with Nesting
+
+1. Check context if module mentioned
+2. Determine class name
+3. Create CSS with LESS nested format (use backticks for multi-line)
+4. Ensure proper brace balancing
+5. Call `addStyle`
+
+**Example:**
+```
+User: "Create green glowing button with hover effect"
+→ addStyle({
+    className: "btn-glow-green",
+    cssContent: `background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+    
+    &:hover {
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+      transform: translateY(-2px);
+    }`
+  })
+```
+
+---
+
+### Workflow 3: Update Existing Style
+
+1. Optionally check current style: `getStyle({className: "..."})`
+2. Call `addStyle` with new content (replaces existing)
+
+**Example:**
+```
+User: "Make btn-blue darker"
+→ addStyle({
+    className: "btn-blue",
+    cssContent: "background: #0056b3; color: white; padding: 12px 24px; border-radius: 6px"
+  })
+→ Note: This REPLACES the existing content
+```
+
+---
+
+### Workflow 4: Apply Style to Component
+
+1. Create style first (if doesn't exist)
+2. Use styleClass parameter when creating component
+3. Multiple classes supported (space-separated)
+
+**Example:**
+```
+User: "Create button with blue style"
+→ Step 1: addStyle({className: "btn-blue", cssContent: "..."})
+→ Step 2: addButton({
+            formName: "myForm",
+            name: "btnSubmit",
+            text: "Submit",
+            styleClass: "btn btn-blue"
+          })
+```
+
+---
+
+### Workflow 5: List and Delete Styles
+
+**List all:**
+```
+User: "Show me all styles"
+→ listStyles()
+→ [Format per "How to Present Results" section]
+```
+
+**Delete:**
+```
+User: "Delete btn-old style"
+→ deleteStyle({className: "btn-old"})
+```
+
+---
+
+## CRITICAL RULES
+
+1. **Class naming**: Use kebab-case, no dots in className parameter (e.g., "btn-custom-blue")
+2. **Context**: Check/set BEFORE creating if user mentions module
+3. **CSS content only**: Do NOT include wrapper `.className { }` - tool adds it
+4. **Two formats**: Simple CSS (semicolon-separated) OR LESS (multi-line with nesting)
+5. **Syntax validation**: Balanced braces, no duplicate braces, no `};` at class level
+6. **File location**: Styles go to `medias/ai-generated.less` in current context
+7. **Backup safety**: All modifications create `.less.backup` file
+8. **Auto-import**: First style creation auto-imports ai-generated.less into main .less
+9. **Applying styles**: Use `styleClass` parameter in component tools
+10. **Tool restrictions**: Use ONLY the 4 tools listed - NO file system or search tools
+
+---
+
+## COMPREHENSIVE EXAMPLES
+
+**Example 1: Simple button in active solution**
+```
+User: "Create blue gradient button style"
+→ addStyle({
+    className: "btn-blue-gradient",
+    cssContent: "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600"
+  })
+```
+
+**Example 2: Style in module with context**
+```
+User: "Create yellow highlight label in Module_B"
+→ setContext({context: "Module_B"})
+→ addStyle({
+    className: "label-highlight",
+    cssContent: "background-color: #fff3cd; color: #856404; padding: 5px 10px; border: 1px solid #ffc107; border-radius: 4px; font-weight: bold"
+  })
+→ Response: "Style 'label-highlight' created in Module_B/medias/ai-generated.less"
+```
+
+**Example 3: LESS with hover effects**
+```
+User: "Create purple button with glow on hover"
+→ addStyle({
+    className: "btn-purple-glow",
+    cssContent: `background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.98);
+    }`
+  })
+```
+
+**Example 4: Update existing style**
+```
+User: "Change btn-blue-gradient to be more purple"
+→ addStyle({
+    className: "btn-blue-gradient",
+    cssContent: "background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%); color: white; padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600"
+  })
+→ Note: Existing style content replaced
+```
+
+**Example 5: Multiple styles for form**
+```
+User: "Create styles for contact form: submit (green), cancel (red), container"
+→ Step 1: addStyle({
+            className: "btn-submit-green",
+            cssContent: "background: #28a745; color: white; padding: 12px 30px; border-radius: 6px; border: none; font-weight: 600"
+          })
+→ Step 2: addStyle({
+            className: "btn-cancel-red",
+            cssContent: "background: #dc3545; color: white; padding: 12px 30px; border-radius: 6px; border: none; font-weight: 600"
+          })
+→ Step 3: addStyle({
+            className: "form-container",
+            cssContent: "padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)"
+          })
+```
+
+**Example 6: Check before create**
+```
+User: "Create primary button style"
+→ Step 1: listStyles()
+→ Step 2: Check if "btn-primary" in list
+→ If found: "Style 'btn-primary' already exists. Update it or create with different name?"
+→ If not found: addStyle({className: "btn-primary", cssContent: "..."})
+```
+
+**Example 7: Apply style to component**
+```
+User: "Create submit button with green style"
+→ Step 1: addStyle({
+            className: "btn-submit-green",
+            cssContent: "background: #28a745; color: white; padding: 12px 24px; border-radius: 6px"
+          })
+→ Step 2: addButton({
+            formName: "contactForm",
+            name: "btnSubmit",
+            text: "Submit",
+            styleClass: "btn btn-submit-green"
+          })
+```
+
+**Example 8: Delete style**
+```
+User: "Delete the old-button style"
+→ deleteStyle({className: "old-button"})
+→ Response: "Style 'old-button' deleted. Backup created at ai-generated.less.backup"
+```
+
+**Example 9: List all styles**
+```
+User: "Show me all styles"
+→ listStyles()
+→ [Format per presentation rules]
+```
+
+**Example 10: Validation error handling**
+```
+User: "Create button with glow"
+→ addStyle({
+    className: "btn-glow",
+    cssContent: `background: blue;
+    {
+      color: white;
+    }`
+  })
+→ Error: "CSS syntax error: Duplicate opening brace '{ {' detected"
+→ Fix: Remove extra brace
+→ Retry: addStyle({
+          className: "btn-glow",
+          cssContent: `background: blue;
+          color: white;`
+        })
+→ Success
+```
 
 **END OF STYLE MANAGEMENT RULES**

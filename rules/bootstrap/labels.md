@@ -23,7 +23,56 @@
 
 ---
 
-## AVAILABLE TOOLS (5)
+## CONTEXT MANAGEMENT (Finding Forms Across Solutions/Modules)
+
+**The label tools are context-aware with smart fallback:**
+
+### How It Works:
+1. **Looks in current context FIRST** (active solution or current module)
+2. **If form not found**, searches all solutions and modules
+3. **If found in ONE place**, auto-switches context and performs operation
+4. **If found in MULTIPLE places**, returns error asking user to specify
+
+### Available Context Tools:
+- **getContext** - Shows current context and available solutions/modules
+- **setContext** - Switches to a different solution or module
+
+### When to Use Context:
+
+**User doesn't specify module:**
+```
+# Tool searches automatically
+addLabel(formName="customerForm", name="lblName", ...)
+# If customerForm exists only in Module_A, tool switches there automatically
+# Returns: "Form not found in active solution. Found in Module_A. Context switched and label added."
+```
+
+**User specifies module explicitly:**
+```
+User: "Add a label to customerForm in Module_B"
+You: setContext({context: "Module_B"})
+     then addLabel(formName="customerForm", ...)
+```
+
+**Form exists in multiple places:**
+```
+addLabel(formName="customerForm", ...)
+# Returns error: "Form 'customerForm' found in multiple locations: MainSolution (active), Module_A, Module_B. 
+# Use setContext to specify which one."
+
+You: setContext({context: "Module_A"})
+     then retry addLabel(formName="customerForm", ...)
+```
+
+### Key Rules for Context:
+1. [AUTOMATIC] Tools search and switch context when form is unambiguous
+2. [REQUIRED] If form in multiple places, use setContext to specify
+3. [OPTIONAL] Can call setContext first to be explicit about target
+4. [INFO] Tools always report which context was used in response
+
+---
+
+## AVAILABLE TOOLS (5) [CONTEXT-AWARE with Smart Fallback]
 
 1. **addLabel** - Add a new label to a form
 2. **updateLabel** - Modify existing label properties
@@ -56,11 +105,23 @@
 **Examples**:
 ```
 # Add label at top-left (20px from top, 25px from left)
+# Tool auto-finds form location if unambiguous
 addLabel(
   formName="CustomerForm",
   name="lblCustomerName",
   text="Customer Name:",
   cssPosition="20,-1,-1,25,120,30"
+)
+
+# User explicitly specifies module
+# User says: "Add a title label to orderForm in Module_A"
+setContext({context: "Module_A"})
+addLabel(
+  formName="orderForm",
+  name="lblTitle",
+  text="Order Entry",
+  cssPosition="10,-1,-1,25,200,35",
+  styleClass="label-primary"
 )
 
 # Add label below previous one (60px from top = 20 + 30 + 10 spacing)
